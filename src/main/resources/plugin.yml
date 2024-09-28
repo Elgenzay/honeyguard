@@ -1,0 +1,7 @@
+name: HoneyGuard
+version: '1.0-SNAPSHOT'
+main: gg.elg.honeyGuard.HoneyGuard
+api-version: '1.21'
+author: Elgenzay
+description: Extends honeycombs to make blocks inflammable and noninteractive
+website: https://github.com/Elgenzay/honeyguard

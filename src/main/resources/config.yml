@@ -1,0 +1,9 @@
+waxable-materials:
+  - "COMPARATOR"
+  - "LEVER"
+  - "REPEATER"
+waxable-materials-suffixes:
+  - "_FENCE_GATE"
+  - "_DOOR"
+  - "_TRAPDOOR"
+particle-range: 20

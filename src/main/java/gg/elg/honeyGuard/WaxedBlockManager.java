@@ -2,6 +2,7 @@ package gg.elg.honeyGuard;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import org.bukkit.Location;
+import org.bukkit.Material;
 
 import java.io.*;
 import java.lang.reflect.Type;
@@ -14,10 +15,12 @@ class WaxedBlockManager {
     private final Gson gson = new Gson();
     private final HashMap<String, HashSet<Coordinate>> waxedBlocks;
     private final File dataFolder;
+    private final List<Material> allWaxableMaterials;
 
-    WaxedBlockManager(Logger logger, File dataFolder) {
+    WaxedBlockManager(Logger logger, File dataFolder, List<Material> allWaxableMaterials) {
         this.logger = logger;
         this.dataFolder = dataFolder;
+        this.allWaxableMaterials = allWaxableMaterials;
         waxedBlocks = new HashMap<>();
     }
 
@@ -41,6 +44,13 @@ class WaxedBlockManager {
 
     boolean isWaxed(Location location) {
         HashSet<Coordinate> coordinates = getWaxedCoordinates(location.getWorld().getName());
+
+        // Remove if block has since been indirectly destroyed
+        if (!allWaxableMaterials.contains(location.getWorld().getBlockAt(location).getType())){
+            removeWaxedBlock(location);
+            return false;
+        }
+
         return coordinates.contains(Coordinate.fromLocation(location));
     }
 

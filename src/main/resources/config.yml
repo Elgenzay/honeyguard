@@ -6,4 +6,22 @@ waxable-materials-suffixes:
   - "_FENCE_GATE"
   - "_DOOR"
   - "_TRAPDOOR"
+
+# Materials that, when waxed, have only a specified chance of using the honeycomb
+chance-based-waxable-materials:
+  - "BOOKSHELF"
+  - "HAY_BLOCK"
+chance-based-waxable-materials-suffixes:
+  - "_WOOD"
+  - "_PLANKS"
+  - "_LOG"
+
+# Percent consumption and drop chances for chance-based waxable materials (0 - 100)
+honeycomb-consumption-chance: 10
+honeycomb-drop-chance: 5
+
+# Distance (taxicab) to show particles on waxed blocks to players holding honeycombs
 particle-range: 20
+
+# Whether to protect waxed blocks from fire spread
+enable-fire-spread-protection: true

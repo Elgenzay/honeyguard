@@ -2,6 +2,7 @@ package gg.elg.honeyGuard;
 
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.Bisected;
 import org.bukkit.block.data.type.Door;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -17,9 +18,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.io.File;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 
 
@@ -28,20 +27,37 @@ public final class HoneyGuard extends JavaPlugin implements Listener {
     private static final String CONFIG_KEY_WAXABLE_MATERIALS = "waxable-materials";
     private static final String CONFIG_KEY_WAXABLE_MATERIALS_SUFFIXES = "waxable-materials-suffixes";
     private static final String CONFIG_KEY_PARTICLE_RANGE = "particle-range";
+    private static final String CONFIG_KEY_FIRE_PROTECTION = "enable-fire-spread-protection";
+    private static final String CONFIG_KEY_CHANCE_BASED_WAXABLE_MATERIALS = "chance-based-waxable-materials";
+    private static final String CONFIG_KEY_CHANCE_BASED_WAXABLE_MATERIALS_SUFFIXES = "chance-based-waxable-materials-suffixes";
+    private static final String CONFIG_KEY_HONEYCOMB_CONSUMPTION_CHANCE = "honeycomb-consumption-chance";
+    private static final String CONFIG_KEY_HONEYCOMB_DROP_CHANCE = "honeycomb-drop-chance";
     private static final String WORLD_DATA_FOLDER_NAME = "world_data";
     private static final long PARTICLE_RATE = 20;
     private int particleRange = 20;
+    private boolean fireProtection = false;
+    private int honeycombConsumptionChance = 10;
+    private int honeycombDropChance = 5;
 
     private WaxedBlockManager waxedBlockManager;
-    private List<Material> waxableMaterials;
+    private List<Material> chanceBasedWaxableMaterials;
+    private List<Material> allWaxableMaterials;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
         FileConfiguration config = getConfig();
         particleRange = config.getInt(CONFIG_KEY_PARTICLE_RANGE, particleRange);
+        fireProtection = config.getBoolean(CONFIG_KEY_FIRE_PROTECTION, fireProtection);
+        honeycombConsumptionChance = config.getInt(CONFIG_KEY_HONEYCOMB_CONSUMPTION_CHANCE, honeycombConsumptionChance);
+        honeycombDropChance = config.getInt(CONFIG_KEY_HONEYCOMB_DROP_CHANCE, honeycombDropChance);
 
-        waxableMaterials = config.getStringList(CONFIG_KEY_WAXABLE_MATERIALS).stream()
+        List<Material> nonChanceBasedWaxableMaterials = config.getStringList(CONFIG_KEY_WAXABLE_MATERIALS).stream()
+                .map(Material::matchMaterial)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+
+        chanceBasedWaxableMaterials = config.getStringList(CONFIG_KEY_CHANCE_BASED_WAXABLE_MATERIALS).stream()
                 .map(Material::matchMaterial)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
@@ -53,16 +69,24 @@ public final class HoneyGuard extends JavaPlugin implements Listener {
             worldDataFolder = getDataFolder();
         }
 
-        waxedBlockManager = new WaxedBlockManager(getLogger(), worldDataFolder);
-        List<String> waxableMaterialsSubstrings = config.getStringList(CONFIG_KEY_WAXABLE_MATERIALS_SUFFIXES);
+        List<String> nonChanceBasedWaxableMaterialsSuffixes = config.getStringList(CONFIG_KEY_WAXABLE_MATERIALS_SUFFIXES);
+        List<String> chanceBasedWaxableMaterialsSuffixes = config.getStringList(CONFIG_KEY_CHANCE_BASED_WAXABLE_MATERIALS_SUFFIXES);
 
         for (Material material : Material.values()) {
-            if (waxableMaterials.contains(material)) continue;
+            if (nonChanceBasedWaxableMaterials.contains(material) || chanceBasedWaxableMaterials.contains(material))
+                continue;
 
-            for (String substring : waxableMaterialsSubstrings)
-                if (material.toString().endsWith(substring)) waxableMaterials.add(material);
+            for (String substring : nonChanceBasedWaxableMaterialsSuffixes)
+                if (material.toString().endsWith(substring)) nonChanceBasedWaxableMaterials.add(material);
+
+            for (String substring : chanceBasedWaxableMaterialsSuffixes)
+                if (material.toString().endsWith(substring)) chanceBasedWaxableMaterials.add(material);
         }
 
+        allWaxableMaterials = new ArrayList<>(nonChanceBasedWaxableMaterials);
+        allWaxableMaterials.addAll(chanceBasedWaxableMaterials);
+
+        waxedBlockManager = new WaxedBlockManager(getLogger(), worldDataFolder, allWaxableMaterials);
         getServer().getPluginManager().registerEvents(this, this);
 
         new BukkitRunnable() {
@@ -76,8 +100,9 @@ public final class HoneyGuard extends JavaPlugin implements Listener {
 
                         for (Coordinate coordinate : waxedCoordinates) {
                             Location coordinateLocation = new Location(world, coordinate.getX(), coordinate.getY(), coordinate.getZ());
+                            Material coordinateMaterial = world.getBlockAt(coordinateLocation).getType();
 
-                            if (!waxableMaterials.contains(world.getBlockAt(coordinateLocation).getType())) {
+                            if (!allWaxableMaterials.contains(coordinateMaterial)) {
                                 // The block has since been destroyed indirectly
                                 toRemove.add(coordinateLocation);
                                 continue;
@@ -87,6 +112,17 @@ public final class HoneyGuard extends JavaPlugin implements Listener {
 
                             if (distance < particleRange) {
                                 Location particleLocation = new Location(world, coordinate.getX() + 0.5, coordinate.getY() + 0.5, coordinate.getZ() + 0.5);
+
+                                if (coordinateMaterial.isOccluding()) {
+                                    Location playerLoc = player.getLocation();
+                                    double dx = playerLoc.getX() - particleLocation.getX();
+                                    double dy = playerLoc.getY() - particleLocation.getY();
+                                    double dz = playerLoc.getZ() - particleLocation.getZ();
+                                    double length = Math.sqrt(dx * dx + dy * dy + dz * dz);
+                                    // Move particles closer to the player so they're not obstructed inside the occluding block
+                                    particleLocation.add((dx / length) * 0.5, (dy / length) * 0.5, (dz / length) * 0.5);
+                                }
+
                                 player.spawnParticle(Particle.WAX_ON, particleLocation, 5, 0.25, 0.25, 0.25, 0);
                             }
                         }
@@ -97,38 +133,43 @@ public final class HoneyGuard extends JavaPlugin implements Listener {
         }.runTaskTimer(this, 0L, PARTICLE_RATE);
     }
 
+
     @EventHandler
     public void onPlayerInteract(PlayerInteractEvent event) {
         Action action = event.getAction();
-
         if (action != Action.RIGHT_CLICK_BLOCK) return;
-
         Block clickedBlock = event.getClickedBlock();
         if (clickedBlock == null) return;
+        Material clickedBlockMaterial = clickedBlock.getType();
         Location location = clickedBlock.getLocation();
         Player player = event.getPlayer();
 
         if (waxedBlockManager.isWaxed(location)){
             ItemStack handItem = event.getItem();
-            if (handItem != null && handItem.getType().isBlock() && player.isSneaking()) return;
+
+            if (handItem != null && handItem.getType().isBlock()){
+                // Let players place blocks against interactable waxed blocks by sneaking
+                if (player.isSneaking()) return;
+
+                // Assume occluding blocks are not interactable so we can place blocks on them without sneaking
+                if (clickedBlockMaterial.isOccluding()) return;
+            }
+
             event.setCancelled(true);
             player.playSound(location, Sound.BLOCK_SIGN_WAXED_INTERACT_FAIL, 1.0f, 1.0f);
             Location particleLocation = new Location(location.getWorld(), location.getX() + 0.5, location.getY() + 0.5, location.getZ() + 0.5);
             player.spawnParticle(Particle.WAX_ON, particleLocation, 5, 0.25, 0.25, 0.25, 0);
-        } else if (event.getPlayer().getInventory().getItemInMainHand().getType() == Material.HONEYCOMB && waxableMaterials.contains(clickedBlock.getType())) {
+        } else if (event.getPlayer().getInventory().getItemInMainHand().getType() == Material.HONEYCOMB && allWaxableMaterials.contains(clickedBlockMaterial)) {
             event.setCancelled(true);
-            takeHeldHoneycomb(player);
+
+            if (chanceBasedWaxableMaterials.contains(clickedBlockMaterial)){
+                if (new Random().nextInt(100) < honeycombConsumptionChance) takeHeldHoneycomb(player);
+            } else takeHeldHoneycomb(player);
+
             waxBlockAt(location);
+            Location otherDoorHalfLocation = otherDoorHalf(clickedBlock);
 
-            if (clickedBlock.getBlockData() instanceof Door door) {
-                Location otherHalfLocation;
-
-                if (door.getHalf() == Bisected.Half.TOP)
-                    otherHalfLocation = clickedBlock.getRelative(org.bukkit.block.BlockFace.DOWN).getLocation();
-                else otherHalfLocation = clickedBlock.getRelative(org.bukkit.block.BlockFace.UP).getLocation();
-
-                waxBlockAt(otherHalfLocation);
-            }
+            if (otherDoorHalfLocation != null) waxBlockAt(otherDoorHalfLocation);
         }
     }
 
@@ -159,9 +200,20 @@ public final class HoneyGuard extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
-        Location eventLocation = event.getBlock().getLocation();
-        if (waxedBlockManager.removeWaxedBlock(eventLocation))
-            eventLocation.getWorld().dropItemNaturally(event.getBlock().getLocation(), new ItemStack(Material.HONEYCOMB));
+        Block block = event.getBlock();
+        Location location = block.getLocation();
+        if (waxedBlockManager.removeWaxedBlock(location)){
+            Material material = block.getType();
+
+            if (chanceBasedWaxableMaterials.contains(material)){
+                if (new Random().nextInt(100) < honeycombDropChance)
+                    location.getWorld().dropItemNaturally(event.getBlock().getLocation(), new ItemStack(Material.HONEYCOMB));
+
+                return;
+            }
+
+            location.getWorld().dropItemNaturally(event.getBlock().getLocation(), new ItemStack(Material.HONEYCOMB));
+        }
     }
 
     @EventHandler
@@ -186,4 +238,49 @@ public final class HoneyGuard extends JavaPlugin implements Listener {
         for (Block block : blocks) waxedBlockManager.removeWaxedBlock(block.getLocation());
     }
 
+    @EventHandler
+    public void onBlockSpread(BlockSpreadEvent event) {
+        if (!fireProtection || event.getSource().getType() != Material.FIRE) return;
+        Block newFireBlock = event.getBlock();
+
+        for (BlockFace face : BlockFace.values()) {
+            Location adjacent = newFireBlock.getRelative(face).getLocation();
+
+            if (waxedBlockManager.isWaxed(adjacent)){
+                event.setCancelled(true);
+                return;
+            }
+        }
+    }
+
+    @EventHandler
+    public void onBlockBurn(BlockBurnEvent event) {
+        if (fireProtection && waxedBlockManager.isWaxed(event.getBlock().getLocation())) event.setCancelled(true);
+    }
+
+
+    @EventHandler
+    public void onBlockPlace(BlockPlaceEvent event) {
+        Block block = event.getBlockPlaced();
+        waxedBlockManager.removeWaxedBlock(block.getLocation());
+
+
+        Location otherDoorHalfLocation = otherDoorHalf(block);
+
+        if (otherDoorHalfLocation != null) waxedBlockManager.removeWaxedBlock(otherDoorHalfLocation);
+    }
+
+    private static Location otherDoorHalf(Block block) {
+        if (block.getBlockData() instanceof Door door) {
+            Location otherHalfLocation;
+
+            if (door.getHalf() == Bisected.Half.TOP)
+                otherHalfLocation = block.getRelative(BlockFace.DOWN).getLocation();
+            else otherHalfLocation = block.getRelative(BlockFace.UP).getLocation();
+
+            return otherHalfLocation;
+        }
+
+        return null;
+    }
 }

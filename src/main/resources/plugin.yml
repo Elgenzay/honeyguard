@@ -5,3 +5,7 @@ api-version: '1.21'
 author: Elgenzay
 description: Extends honeycombs to make blocks inflammable and noninteractive
 website: https://github.com/Elgenzay/honeyguard
+commands:
+  honeyguard:
+    description: Display help information for the HoneyGuard plugin
+    usage: /honeyguard <command>

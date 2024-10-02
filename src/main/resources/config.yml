@@ -1,7 +1,16 @@
+# Whether to protect waxed blocks from fire spread
+enable-fire-spread-protection: true
+
+# Distance (taxicab) to show particles on waxed blocks to players holding honeycombs
+particle-range: 20
+
+# Materials that require one honeycomb to wax and guarantee one honeycomb drop upon destruction
+# Materials list: https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/Material.html
 waxable-materials:
   - "COMPARATOR"
   - "LEVER"
   - "REPEATER"
+# Any Material ending with these suffixes will be added to waxable-materials
 waxable-materials-suffixes:
   - "_FENCE_GATE"
   - "_DOOR"
@@ -11,17 +20,13 @@ waxable-materials-suffixes:
 chance-based-waxable-materials:
   - "BOOKSHELF"
   - "HAY_BLOCK"
+# Any Material ending with these suffixes will be added to chance-based-waxable-materials
 chance-based-waxable-materials-suffixes:
   - "_WOOD"
   - "_PLANKS"
   - "_LOG"
+  - "_LEAVES"
 
 # Percent consumption and drop chances for chance-based waxable materials (0 - 100)
 honeycomb-consumption-chance: 10
 honeycomb-drop-chance: 5
-
-# Distance (taxicab) to show particles on waxed blocks to players holding honeycombs
-particle-range: 20
-
-# Whether to protect waxed blocks from fire spread
-enable-fire-spread-protection: true

@@ -30,3 +30,7 @@ chance-based-waxable-materials-suffixes:
 # Percent consumption and drop chances for chance-based waxable materials (0 - 100)
 honeycomb-consumption-chance: 10
 honeycomb-drop-chance: 5
+
+# Rate in minutes to save waxed block data to world_data files. Set to 0 to disable autosave.
+# world_data files are saved on server shutdown regardless of this value.
+autosave-rate: 5

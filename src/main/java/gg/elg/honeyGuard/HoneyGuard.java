@@ -34,12 +34,14 @@ public final class HoneyGuard extends JavaPlugin implements Listener {
     private static final String CONFIG_KEY_CHANCE_BASED_WAXABLE_MATERIALS_SUFFIXES = "chance-based-waxable-materials-suffixes";
     private static final String CONFIG_KEY_HONEYCOMB_CONSUMPTION_CHANCE = "honeycomb-consumption-chance";
     private static final String CONFIG_KEY_HONEYCOMB_DROP_CHANCE = "honeycomb-drop-chance";
+    private static final String CONFIG_KEY_SAVE_RATE = "autosave-rate";
     private static final String WORLD_DATA_FOLDER_NAME = "world_data";
-    private static final long PARTICLE_RATE = 20;
+    private static final long PARTICLE_RATE_TICKS = 20;
     private int particleRange = 20;
     boolean fireProtection = false;
     int honeycombConsumptionChance = 10;
     int honeycombDropChance = 5;
+    private long saveRateMinutes = 5;
 
     private WaxedBlockManager waxedBlockManager;
     List<Material> chanceBasedWaxableMaterials;
@@ -54,6 +56,7 @@ public final class HoneyGuard extends JavaPlugin implements Listener {
         fireProtection = config.getBoolean(CONFIG_KEY_FIRE_PROTECTION, fireProtection);
         honeycombConsumptionChance = config.getInt(CONFIG_KEY_HONEYCOMB_CONSUMPTION_CHANCE, honeycombConsumptionChance);
         honeycombDropChance = config.getInt(CONFIG_KEY_HONEYCOMB_DROP_CHANCE, honeycombDropChance);
+        saveRateMinutes = config.getLong(CONFIG_KEY_SAVE_RATE, saveRateMinutes);
 
         nonChanceBasedWaxableMaterials = config.getStringList(CONFIG_KEY_WAXABLE_MATERIALS).stream()
                 .map(Material::matchMaterial)
@@ -141,7 +144,21 @@ public final class HoneyGuard extends JavaPlugin implements Listener {
                         for (Location removeLocation : toRemove) waxedBlockManager.removeWaxedBlock(removeLocation);
                     }
             }
-        }.runTaskTimer(this, 0L, PARTICLE_RATE);
+        }.runTaskTimer(this, 0L, PARTICLE_RATE_TICKS);
+
+        if (saveRateMinutes == 0) return;
+
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                waxedBlockManager.saveAllUnsavedChanges();
+            }
+        }.runTaskTimer(this, 0L, 20 * 60 * saveRateMinutes);
+    }
+
+    @Override
+    public void onDisable() {
+        waxedBlockManager.saveAllUnsavedChanges();
     }
 
     @EventHandler

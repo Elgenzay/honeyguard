@@ -1,4 +1,5 @@
 package gg.elg.honeyGuard;
+
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import org.bukkit.Location;
@@ -16,6 +17,7 @@ class WaxedBlockManager {
     private final HashMap<String, HashSet<Coordinate>> waxedBlocks;
     private final File dataFolder;
     private final List<Material> allWaxableMaterials;
+    private static HashSet<String> unsavedWorldNames = new HashSet<>();
 
     WaxedBlockManager(Logger logger, File dataFolder, List<Material> allWaxableMaterials) {
         this.logger = logger;
@@ -26,8 +28,8 @@ class WaxedBlockManager {
 
     void addWaxedBlock(Location location) {
         HashSet<Coordinate> waxedCoordinates = getWaxedCoordinates(location.getWorld().getName());
-        waxedCoordinates.add(Coordinate.fromLocation(location));
-        saveFile(location.getWorld().getName());
+        if (waxedCoordinates.add(Coordinate.fromLocation(location)))
+            unsavedWorldNames.add(location.getWorld().getName());
     }
 
     boolean removeWaxedBlock(Location location) {
@@ -35,7 +37,7 @@ class WaxedBlockManager {
         if (coordinates == null) return false;
 
         if (coordinates.remove(Coordinate.fromLocation(location))) {
-            saveFile(location.getWorld().getName());
+            unsavedWorldNames.add(location.getWorld().getName());
             return true;
         }
 
@@ -46,7 +48,7 @@ class WaxedBlockManager {
         HashSet<Coordinate> coordinates = getWaxedCoordinates(location.getWorld().getName());
 
         // Remove if block has since been indirectly destroyed
-        if (!allWaxableMaterials.contains(location.getWorld().getBlockAt(location).getType())){
+        if (!allWaxableMaterials.contains(location.getWorld().getBlockAt(location).getType())) {
             removeWaxedBlock(location);
             return false;
         }
@@ -59,8 +61,13 @@ class WaxedBlockManager {
             HashSet<Coordinate> coordinates = waxedBlocks.getOrDefault(worldName, new HashSet<>());
             gson.toJson(coordinates, writer);
         } catch (IOException e) {
-            logger.severe("Error saving file for world " + worldName +  ": " + e.getMessage());
+            logger.severe("Error saving file for world " + worldName + ": " + e.getMessage());
         }
+    }
+
+    void saveAllUnsavedChanges() {
+        for (String worldName : unsavedWorldNames) saveFile(worldName);
+        unsavedWorldNames = new HashSet<>();
     }
 
     HashSet<Coordinate> getWaxedCoordinates(String worldName) {

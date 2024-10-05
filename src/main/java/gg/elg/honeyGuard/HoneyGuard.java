@@ -14,7 +14,10 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.*;
 import org.bukkit.event.entity.EntityExplodeEvent;
+import org.bukkit.event.entity.EntityPickupItemEvent;
+import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -35,18 +38,36 @@ public final class HoneyGuard extends JavaPlugin implements Listener {
     private static final String CONFIG_KEY_HONEYCOMB_CONSUMPTION_CHANCE = "honeycomb-consumption-chance";
     private static final String CONFIG_KEY_HONEYCOMB_DROP_CHANCE = "honeycomb-drop-chance";
     private static final String CONFIG_KEY_SAVE_RATE = "autosave-rate";
+    private static final String CONFIG_KEY_INTRO_MESSAGE = "enable-introductory-message";
     private static final String WORLD_DATA_FOLDER_NAME = "world_data";
     private static final long PARTICLE_RATE_TICKS = 20;
     private int particleRange = 20;
-    boolean fireProtection = false;
+    boolean fireProtection = true;
+    private boolean showIntroductionMessage = true;
     int honeycombConsumptionChance = 10;
     int honeycombDropChance = 5;
     private long saveRateMinutes = 5;
 
     private WaxedBlockManager waxedBlockManager;
-    List<Material> chanceBasedWaxableMaterials;
-    List<Material> nonChanceBasedWaxableMaterials;
+    private IntroductionManager introductionManager;
+    List<Material> chanceBasedWaxableMaterials = Collections.emptyList();
+    List<Material> nonChanceBasedWaxableMaterials = Collections.emptyList();
     private List<Material> allWaxableMaterials;
+
+    private List<String> getStringListOrEmpty(String path) {
+        FileConfiguration config = getConfig();
+
+        if (config.contains(path, true)) {
+            List<?> list = config.getList(path);
+            if (list == null || list.isEmpty()) return Collections.emptyList();
+
+            return list.stream()
+                    .filter(Objects::nonNull)
+                    .map(Object::toString)
+                    .collect(Collectors.toList());
+        }
+        return Collections.emptyList();
+    }
 
     @Override
     public void onEnable() {
@@ -57,16 +78,21 @@ public final class HoneyGuard extends JavaPlugin implements Listener {
         honeycombConsumptionChance = config.getInt(CONFIG_KEY_HONEYCOMB_CONSUMPTION_CHANCE, honeycombConsumptionChance);
         honeycombDropChance = config.getInt(CONFIG_KEY_HONEYCOMB_DROP_CHANCE, honeycombDropChance);
         saveRateMinutes = config.getLong(CONFIG_KEY_SAVE_RATE, saveRateMinutes);
+        showIntroductionMessage = config.getBoolean(CONFIG_KEY_INTRO_MESSAGE, showIntroductionMessage);
 
-        nonChanceBasedWaxableMaterials = config.getStringList(CONFIG_KEY_WAXABLE_MATERIALS).stream()
-                .map(Material::matchMaterial)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
+        if (config.isList(CONFIG_KEY_WAXABLE_MATERIALS))
+            nonChanceBasedWaxableMaterials = getStringListOrEmpty(CONFIG_KEY_WAXABLE_MATERIALS).stream()
+                    .map(Material::matchMaterial)
+                    .filter(Objects::nonNull)
+                    .sorted(Comparator.comparing(Material::toString))
+                    .collect(Collectors.toList());
 
-        chanceBasedWaxableMaterials = config.getStringList(CONFIG_KEY_CHANCE_BASED_WAXABLE_MATERIALS).stream()
-                .map(Material::matchMaterial)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
+        if (config.isList(CONFIG_KEY_WAXABLE_MATERIALS))
+            chanceBasedWaxableMaterials = getStringListOrEmpty(CONFIG_KEY_CHANCE_BASED_WAXABLE_MATERIALS).stream()
+                    .map(Material::matchMaterial)
+                    .filter(Objects::nonNull)
+                    .sorted(Comparator.comparing(Material::toString))
+                    .collect(Collectors.toList());
 
         File worldDataFolder = new File(getDataFolder(), WORLD_DATA_FOLDER_NAME);
 
@@ -75,14 +101,20 @@ public final class HoneyGuard extends JavaPlugin implements Listener {
             worldDataFolder = getDataFolder();
         }
 
-        List<String> nonChanceBasedWaxableMaterialsSuffixes = config
-                .getStringList(CONFIG_KEY_WAXABLE_MATERIALS_SUFFIXES);
-        List<String> chanceBasedWaxableMaterialsSuffixes = config
-                .getStringList(CONFIG_KEY_CHANCE_BASED_WAXABLE_MATERIALS_SUFFIXES);
+        List<String> nonChanceBasedWaxableMaterialsSuffixes = Collections.emptyList();
+        if (config.isList(CONFIG_KEY_WAXABLE_MATERIALS_SUFFIXES))
+            nonChanceBasedWaxableMaterialsSuffixes = getStringListOrEmpty(CONFIG_KEY_WAXABLE_MATERIALS_SUFFIXES);
+
+        List<String> chanceBasedWaxableMaterialsSuffixes = Collections.emptyList();
+        if (config.isList(CONFIG_KEY_CHANCE_BASED_WAXABLE_MATERIALS_SUFFIXES))
+            chanceBasedWaxableMaterialsSuffixes = getStringListOrEmpty(CONFIG_KEY_CHANCE_BASED_WAXABLE_MATERIALS_SUFFIXES);
 
         for (Material material : Material.values()) {
             if (nonChanceBasedWaxableMaterials.contains(material) || chanceBasedWaxableMaterials.contains(material))
                 continue;
+
+            nonChanceBasedWaxableMaterials.sort(Comparator.comparing(Material::toString));
+            chanceBasedWaxableMaterials.sort(Comparator.comparing(Material::toString));
 
             for (String substring : nonChanceBasedWaxableMaterialsSuffixes)
                 if (material.toString().endsWith(substring)) nonChanceBasedWaxableMaterials.add(material);
@@ -95,6 +127,7 @@ public final class HoneyGuard extends JavaPlugin implements Listener {
         allWaxableMaterials.addAll(chanceBasedWaxableMaterials);
 
         waxedBlockManager = new WaxedBlockManager(getLogger(), worldDataFolder, allWaxableMaterials);
+        introductionManager = new IntroductionManager(getLogger(), getDataFolder());
         getServer().getPluginManager().registerEvents(this, this);
         PluginCommand command = Objects.requireNonNull(getCommand("honeyguard"));
         command.setExecutor(new Commands(this));
@@ -152,6 +185,7 @@ public final class HoneyGuard extends JavaPlugin implements Listener {
             @Override
             public void run() {
                 waxedBlockManager.saveAllUnsavedChanges();
+                introductionManager.saveIfNeeded();
             }
         }.runTaskTimer(this, 0L, 20 * 60 * saveRateMinutes);
     }
@@ -159,6 +193,7 @@ public final class HoneyGuard extends JavaPlugin implements Listener {
     @Override
     public void onDisable() {
         waxedBlockManager.saveAllUnsavedChanges();
+        introductionManager.saveIfNeeded();
     }
 
     @EventHandler
@@ -343,5 +378,30 @@ public final class HoneyGuard extends JavaPlugin implements Listener {
         }
 
         return null;
+    }
+
+    @EventHandler
+    public void onEntityPickupItem(EntityPickupItemEvent event) {
+        if (!showIntroductionMessage) return;
+
+        if (event.getEntity() instanceof Player player) {
+            if (event.getItem().getItemStack().getType() != Material.HONEYCOMB) return;
+            if (introductionManager.hasNotBeenIntroduced(player)) introductionManager.introduce(player);
+        }
+    }
+
+
+    @EventHandler
+    public void onInventoryPickup(InventoryOpenEvent event) {
+        if (!showIntroductionMessage) return;
+
+        if (event.getPlayer() instanceof Player player) {
+            Inventory inventory = event.getInventory();
+            for (ItemStack item : inventory.getContents())
+                if (item != null && item.getType() == Material.HONEYCOMB && introductionManager.hasNotBeenIntroduced(player)) {
+                    introductionManager.introduce(player);
+                    break;
+                }
+        }
     }
 }

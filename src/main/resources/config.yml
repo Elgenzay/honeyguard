@@ -34,3 +34,7 @@ honeycomb-drop-chance: 5
 # Rate in minutes to save waxed block data to world_data files. Set to 0 to disable autosave.
 # world_data files are saved on server shutdown regardless of this value.
 autosave-rate: 5
+
+# Whether to send a message to players introducing the plugin upon picking up a honeycomb for the first time.
+# The introductory message is sent only once per player. Introduced players are tracked in introduced_players.json
+enable-introductory-message: true

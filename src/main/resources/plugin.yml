@@ -3,7 +3,7 @@ version: '1.0-SNAPSHOT'
 main: gg.elg.honeyGuard.HoneyGuard
 api-version: '1.21'
 author: Elgenzay
-description: Extends honeycombs to make blocks inflammable and noninteractive
+description: Extends honeycombs to make blocks noninteractive with optional fire spread prevention.
 website: https://github.com/Elgenzay/honeyguard
 commands:
   honeyguard:

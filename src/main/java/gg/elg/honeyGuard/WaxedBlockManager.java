@@ -73,7 +73,11 @@ class WaxedBlockManager {
     HashSet<Coordinate> getWaxedCoordinates(String worldName) {
         if (waxedBlocks.containsKey(worldName)) return waxedBlocks.get(worldName);
         File dataFile = new File(dataFolder, worldName + ".json");
-        if (!dataFile.exists()) return new HashSet<>();
+
+        if (!dataFile.exists()){
+            waxedBlocks.put(worldName, new HashSet<>());
+            return new HashSet<>();
+        }
 
         try (Reader reader = new FileReader(dataFile)) {
             Type type = new TypeToken<HashSet<Coordinate>>() {

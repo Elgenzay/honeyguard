@@ -1,5 +1,7 @@
 # Whether to protect waxed blocks from fire spread
 enable-fire-spread-protection: true
+# Note: If you disable fire protection, you may want to also make the chance-based lists empty
+# as they contain flammable blocks by default, which have no effect when waxed if fire protection is disabled.
 
 # Distance (taxicab) to show particles on waxed blocks to players holding honeycombs
 particle-range: 20
@@ -10,31 +12,52 @@ waxable-materials:
   - "COMPARATOR"
   - "LEVER"
   - "REPEATER"
-# Any Material ending with these suffixes will be added to waxable-materials
+# Any Material ending with these suffixes will be added to `waxable-materials`
 waxable-materials-suffixes:
-  - "_FENCE_GATE"
   - "_DOOR"
+  - "_FENCE_GATE"
   - "_TRAPDOOR"
 
 # Materials that, when waxed, have only a specified chance of using the honeycomb
 chance-based-waxable-materials:
   - "BOOKSHELF"
   - "HAY_BLOCK"
-# Any Material ending with these suffixes will be added to chance-based-waxable-materials
+# Any Material ending with these suffixes will be added to `chance-based-waxable-materials`
 chance-based-waxable-materials-suffixes:
-  - "_WOOD"
-  - "_PLANKS"
-  - "_LOG"
+  - "_FENCE"
   - "_LEAVES"
+  - "_LOG"
+  - "_PLANKS"
+  - "_WOOD"
 
-# Percent consumption and drop chances for chance-based waxable materials (0 - 100)
+# Percent consumption and drop chances for chance-based waxable materials (0 to 100)
 honeycomb-consumption-chance: 10
 honeycomb-drop-chance: 5
 
-# Rate in minutes to save waxed block data to world_data files. Set to 0 to disable autosave.
-# world_data files are saved on server shutdown regardless of this value.
-autosave-rate: 5
+# Materials that become noninteractive when waxed.
+# This list should only contain interactive materials to allow right-clicking on other waxed blocks with usable items.
+interactive-materials:
+  - "COMPARATOR"
+  - "LEVER"
+  - "REPEATER"
+interactive-materials-suffixes:
+  - "_DOOR"
+  - "_FENCE_GATE"
+  - "_TRAPDOOR"
 
 # Whether to send a message to players introducing the plugin upon picking up a honeycomb for the first time.
-# The introductory message is sent only once per player. Introduced players are tracked in introduced_players.json
+# The introductory message is sent only once per player. Introduced players are tracked in `introduced_players.json`
 enable-introductory-message: true
+
+# Rate in minutes to save plugin data (waxed blocks & introduced players). Set to 0 to disable autosave.
+# Plugin data is saved on graceful server shutdowns regardless of this value.
+autosave-rate: 5
+
+# `world-list` is a whitelist if true and a blacklist if false.
+use-world-whitelist: false
+
+# List of worlds in which the plugin is enabled or disabled depending on the use-world-whitelist value
+world-list:
+#  - "world"
+#  - "world_nether"
+#  - "world_the_end"

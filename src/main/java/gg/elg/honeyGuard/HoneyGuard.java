@@ -33,10 +33,17 @@ public final class HoneyGuard extends JavaPlugin implements Listener {
 
     private static final String CONFIG_KEY_WAXABLE_MATERIALS = "waxable-materials";
     private static final String CONFIG_KEY_WAXABLE_MATERIALS_SUFFIXES = "waxable-materials-suffixes";
-    private static final String CONFIG_KEY_PARTICLE_RANGE = "particle-range";
+    private static final String CONFIG_KEY_WAXABLE_MATERIALS_PREFIXES = "waxable-materials-prefixes";
+    private static final String CONFIG_KEY_PARTICLE_RANGE = "on-honeycomb-hold-particle-range";
+    private static final String CONFIG_KEY_PARTICLE_RATE = "on-honeycomb-hold-particle-rate";
+    private static final String CONFIG_KEY_PARTICLE_COUNT_HELD = "on-honeycomb-hold-particle-count";
+    private static final String CONFIG_KEY_PARTICLE_COUNT_WAX = "on-wax-particle-count";
+    private static final String CONFIG_KEY_PARTICLE_COUNT_CANCEL = "on-cancel-particle-count";
+    private static final String CONFIG_KEY_PARTICLE_RADIUS = "particle-radius";
     private static final String CONFIG_KEY_FIRE_PROTECTION = "enable-fire-spread-protection";
     private static final String CONFIG_KEY_CHANCE_BASED_WAXABLE_MATERIALS = "chance-based-waxable-materials";
     private static final String CONFIG_KEY_CHANCE_BASED_WAXABLE_MATERIALS_SUFFIXES = "chance-based-waxable-materials-suffixes";
+    private static final String CONFIG_KEY_CHANCE_BASED_WAXABLE_MATERIALS_PREFIXES = "chance-based-waxable-materials-prefixes";
     private static final String CONFIG_KEY_HONEYCOMB_CONSUMPTION_CHANCE = "honeycomb-consumption-chance";
     private static final String CONFIG_KEY_HONEYCOMB_DROP_CHANCE = "honeycomb-drop-chance";
     private static final String CONFIG_KEY_INTERACTIVE_MATERIALS = "interactive-materials";
@@ -45,9 +52,19 @@ public final class HoneyGuard extends JavaPlugin implements Listener {
     private static final String CONFIG_KEY_INTRO_MESSAGE = "enable-introductory-message";
     private static final String CONFIG_KEY_USE_WORLD_WHITELIST = "use-world-whitelist";
     private static final String CONFIG_KEY_WORLD_LIST = "world-list";
+    private static final String CONFIG_KEY_DISALLOWED_HELD_MATERIALS = "disallowed-held-materials";
+    private static final String CONFIG_KEY_DISALLOWED_HELD_MATERIALS_SUFFIXES = "disallowed-held-materials-suffixes";
+    private static final String CONFIG_KEY_PARTICLE_NUDGE_MATERIALS = "particle-nudge-materials";
+    private static final String CONFIG_KEY_PARTICLE_NUDGE_MATERIALS_SUFFIXES = "particle-nudge-materials-suffixes";
+    private static final String CONFIG_KEY_PARTICLE_NUDGE_AMOUNT = "particle-nudge-amount";
     private static final String WORLD_DATA_FOLDER_NAME = "world_data";
-    private static final long PARTICLE_RATE_TICKS = 20;
+    private long particleRate = 20;
     private int particleRange = 20;
+    private int particleCountHeld = 2;
+    private int particleCountWax = 8;
+    private int particleCountCancel = 4;
+    private double particleRadius = 0.20;
+    private double particleNudgeAmount = 0.6;
     boolean fireProtection = true;
     private boolean showIntroductionMessage = true;
     int honeycombConsumptionChance = 10;
@@ -60,6 +77,8 @@ public final class HoneyGuard extends JavaPlugin implements Listener {
     List<Material> nonChanceBasedWaxableMaterials;
     private List<Material> interactiveMaterials;
     private List<Material> allWaxableMaterials;
+    private List<Material> disallowedHeldMaterials;
+    private List<Material> particleOffsetMaterials;
     private List<String> worldList;
     private boolean usingWorldWhitelist;
 
@@ -95,6 +114,11 @@ public final class HoneyGuard extends JavaPlugin implements Listener {
         saveDefaultConfig();
         FileConfiguration config = getConfig();
         particleRange = config.getInt(CONFIG_KEY_PARTICLE_RANGE, particleRange);
+        particleRate = config.getLong(CONFIG_KEY_PARTICLE_RATE, particleRate);
+        particleCountWax = config.getInt(CONFIG_KEY_PARTICLE_COUNT_WAX, particleCountWax);
+        particleCountHeld = config.getInt(CONFIG_KEY_PARTICLE_COUNT_HELD, particleCountHeld);
+        particleCountCancel = config.getInt(CONFIG_KEY_PARTICLE_COUNT_CANCEL, particleCountCancel);
+        particleRadius = config.getDouble(CONFIG_KEY_PARTICLE_RADIUS, particleRadius);
         fireProtection = config.getBoolean(CONFIG_KEY_FIRE_PROTECTION, fireProtection);
         honeycombConsumptionChance = config.getInt(CONFIG_KEY_HONEYCOMB_CONSUMPTION_CHANCE, honeycombConsumptionChance);
         honeycombDropChance = config.getInt(CONFIG_KEY_HONEYCOMB_DROP_CHANCE, honeycombDropChance);
@@ -103,6 +127,9 @@ public final class HoneyGuard extends JavaPlugin implements Listener {
         nonChanceBasedWaxableMaterials = getMaterialList(CONFIG_KEY_WAXABLE_MATERIALS);
         chanceBasedWaxableMaterials = getMaterialList(CONFIG_KEY_CHANCE_BASED_WAXABLE_MATERIALS);
         interactiveMaterials = getMaterialList(CONFIG_KEY_INTERACTIVE_MATERIALS);
+        disallowedHeldMaterials = getMaterialList(CONFIG_KEY_DISALLOWED_HELD_MATERIALS);
+        particleOffsetMaterials = getMaterialList(CONFIG_KEY_PARTICLE_NUDGE_MATERIALS);
+        particleNudgeAmount = config.getDouble(CONFIG_KEY_PARTICLE_NUDGE_AMOUNT, particleNudgeAmount);
         File worldDataFolder = new File(getDataFolder(), WORLD_DATA_FOLDER_NAME);
 
         if (!worldDataFolder.exists() && !worldDataFolder.mkdirs()) {
@@ -111,8 +138,12 @@ public final class HoneyGuard extends JavaPlugin implements Listener {
         }
 
         List<String> nonChanceBasedWaxableMaterialsSuffixes = getStringListOrEmpty(CONFIG_KEY_WAXABLE_MATERIALS_SUFFIXES);
+        List<String> nonChanceBasedWaxableMaterialsPrefixes = getStringListOrEmpty(CONFIG_KEY_WAXABLE_MATERIALS_PREFIXES);
         List<String> chanceBasedWaxableMaterialsSuffixes = getStringListOrEmpty(CONFIG_KEY_CHANCE_BASED_WAXABLE_MATERIALS_SUFFIXES);
+        List<String> chanceBasedWaxableMaterialsPrefixes = getStringListOrEmpty(CONFIG_KEY_CHANCE_BASED_WAXABLE_MATERIALS_PREFIXES);
         List<String> interactiveMaterialsSuffixes = getStringListOrEmpty(CONFIG_KEY_INTERACTIVE_MATERIALS_SUFFIXES);
+        List<String> disallowedHeldMaterialsSuffixes = getStringListOrEmpty(CONFIG_KEY_DISALLOWED_HELD_MATERIALS_SUFFIXES);
+        List<String> particleOffsetMaterialsSuffixes = getStringListOrEmpty(CONFIG_KEY_PARTICLE_NUDGE_MATERIALS_SUFFIXES);
         worldList = getStringListOrEmpty(CONFIG_KEY_WORLD_LIST);
         usingWorldWhitelist = config.getBoolean(CONFIG_KEY_USE_WORLD_WHITELIST);
 
@@ -123,13 +154,26 @@ public final class HoneyGuard extends JavaPlugin implements Listener {
             for (String substring : nonChanceBasedWaxableMaterialsSuffixes)
                 if (material.toString().endsWith(substring)) nonChanceBasedWaxableMaterials.add(material);
 
+            for (String substring : nonChanceBasedWaxableMaterialsPrefixes)
+                if (material.toString().startsWith(substring)) nonChanceBasedWaxableMaterials.add(material);
+
             for (String substring : chanceBasedWaxableMaterialsSuffixes)
                 if (material.toString().endsWith(substring)) chanceBasedWaxableMaterials.add(material);
 
+            for (String substring : chanceBasedWaxableMaterialsPrefixes)
+                if (material.toString().startsWith(substring)) chanceBasedWaxableMaterials.add(material);
+
             for (String substring : interactiveMaterialsSuffixes)
                 if (material.toString().endsWith(substring)) interactiveMaterials.add(material);
+
+            for (String substring : disallowedHeldMaterialsSuffixes)
+                if (material.toString().endsWith(substring)) disallowedHeldMaterials.add(material);
+
+            for (String substring : particleOffsetMaterialsSuffixes)
+                if (material.toString().endsWith(substring)) particleOffsetMaterials.add(material);
         }
 
+        chanceBasedWaxableMaterials.removeAll(nonChanceBasedWaxableMaterials);
         nonChanceBasedWaxableMaterials.sort(Comparator.comparing(Material::toString));
         chanceBasedWaxableMaterials.sort(Comparator.comparing(Material::toString));
         allWaxableMaterials = new ArrayList<>(nonChanceBasedWaxableMaterials);
@@ -170,17 +214,12 @@ public final class HoneyGuard extends JavaPlugin implements Listener {
                                 Location particleLocation = new Location(world, coordinate.getX() + 0.5,
                                         coordinate.getY() + 0.5, coordinate.getZ() + 0.5);
 
-                                if (coordinateMaterial.isOccluding()) {
-                                    Location playerLoc = player.getLocation();
-                                    double dx = playerLoc.getX() - particleLocation.getX();
-                                    double dy = playerLoc.getY() - particleLocation.getY();
-                                    double dz = playerLoc.getZ() - particleLocation.getZ();
-                                    double length = Math.sqrt(dx * dx + dy * dy + dz * dz);
-                                    // Move particles closer to the player so they're not obstructed inside the occluding block
-                                    particleLocation.add((dx / length) * 0.5, (dy / length) * 0.5, (dz / length) * 0.5);
+                                if (coordinateMaterial.isOccluding() || particleOffsetMaterials.contains(coordinateMaterial)) {
+                                    Location playerLocation = player.getLocation();
+                                    nudgeTowards(particleLocation, playerLocation);
                                 }
 
-                                player.spawnParticle(Particle.WAX_ON, particleLocation, 5, 0.25, 0.25, 0.25, 0);
+                                player.spawnParticle(Particle.WAX_ON, particleLocation, particleCountHeld, particleRadius, particleRadius, particleRadius, 0);
                             }
                         }
 
@@ -188,7 +227,7 @@ public final class HoneyGuard extends JavaPlugin implements Listener {
                     }
                 }
             }
-        }.runTaskTimer(this, 0L, PARTICLE_RATE_TICKS);
+        }.runTaskTimer(this, 0L, particleRate);
 
         if (saveRateMinutes == 0) return;
 
@@ -199,6 +238,14 @@ public final class HoneyGuard extends JavaPlugin implements Listener {
                 introductionManager.saveIfNeeded();
             }
         }.runTaskTimer(this, 0L, 20 * 60 * saveRateMinutes);
+    }
+
+    private void nudgeTowards(Location particleLocation, Location playerLocation){
+        double dx = playerLocation.getX() - particleLocation.getX();
+        double dy = playerLocation.getY() - particleLocation.getY();
+        double dz = playerLocation.getZ() - particleLocation.getZ();
+        double length = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        particleLocation.add((dx / length) * particleNudgeAmount, (dy / length) * particleNudgeAmount, (dz / length) * particleNudgeAmount);
     }
 
     @Override
@@ -236,14 +283,15 @@ public final class HoneyGuard extends JavaPlugin implements Listener {
         if (action != Action.RIGHT_CLICK_BLOCK) return;
 
         if (waxedBlockManager.isWaxed(location)) {
-            if (!interactiveMaterials.contains(clickedBlockMaterial)) return;
-            if (event.getItem() != null && player.isSneaking()) return;
+            if (!disallowedHeldMaterials.contains(player.getInventory().getItemInMainHand().getType())) {
+                if (!interactiveMaterials.contains(clickedBlockMaterial)) return;
+                if (event.getItem() != null && player.isSneaking()) return;
+            }
 
             event.setCancelled(true);
             player.playSound(location, Sound.BLOCK_SIGN_WAXED_INTERACT_FAIL, 1.0f, 1.0f);
-            Location particleLocation = new Location(location.getWorld(), location.getX() + 0.5, location.getY() + 0.5,
-                    location.getZ() + 0.5);
-            player.spawnParticle(Particle.WAX_ON, particleLocation, 5, 0.25, 0.25, 0.25, 0);
+            Location particleLocation = new Location(location.getWorld(), location.getX() + 0.5, location.getY() + 0.5, location.getZ() + 0.5);
+            player.spawnParticle(Particle.WAX_ON, particleLocation, particleCountCancel, particleRadius, particleRadius, particleRadius);
         } else if (isHoldingHoneycomb && allWaxableMaterials.contains(clickedBlockMaterial)) {
             event.setCancelled(true);
 
@@ -252,18 +300,26 @@ public final class HoneyGuard extends JavaPlugin implements Listener {
                     if (new Random().nextInt(100) < honeycombConsumptionChance) takeHeldHoneycomb(player);
                 } else takeHeldHoneycomb(player);
 
-            waxBlockAt(location);
+            waxBlock(clickedBlock, player);
             Location otherDoorHalfLocation = otherDoorHalf(clickedBlock);
 
-            if (otherDoorHalfLocation != null) waxBlockAt(otherDoorHalfLocation);
+            if (otherDoorHalfLocation != null){
+                Block otherDoorHalf = otherDoorHalfLocation.getBlock();
+                waxBlock(otherDoorHalf, player);
+            }
         }
     }
 
-    private void waxBlockAt(Location location) {
+    private void waxBlock(Block block, Player player) {
+        Location location = block.getLocation();
         waxedBlockManager.addWaxedBlock(location);
         World world = location.getWorld();
         Location particleLocation = new Location(world, location.getX() + 0.5, location.getY() + 0.5, location.getZ() + 0.5);
-        world.spawnParticle(Particle.WAX_ON, particleLocation, 5, 0.25, 0.25, 0.25, 0);
+
+        if (block.getType().isOccluding() || particleOffsetMaterials.contains(block.getType()))
+            nudgeTowards(particleLocation, player.getLocation());
+
+        world.spawnParticle(Particle.WAX_ON, particleLocation, particleCountWax, particleRadius, particleRadius, particleRadius);
         world.playSound(location, Sound.ITEM_HONEYCOMB_WAX_ON, 1.0f, 1.0f);
     }
 
@@ -292,6 +348,7 @@ public final class HoneyGuard extends JavaPlugin implements Listener {
         if (isDisabledInWorld(world)) return;
 
         if (waxedBlockManager.removeWaxedBlock(location)) {
+            if (event.getPlayer().getGameMode() == GameMode.CREATIVE) return;
             Material material = block.getType();
 
             if (chanceBasedWaxableMaterials.contains(material)) {

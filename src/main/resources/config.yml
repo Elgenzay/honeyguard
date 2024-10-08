@@ -1,10 +1,5 @@
 # Whether to protect waxed blocks from fire spread
 enable-fire-spread-protection: true
-# Note: If you disable fire protection, you may want to also make the chance-based lists empty
-# as they contain flammable blocks by default, which have no effect when waxed if fire protection is disabled.
-
-# Distance (taxicab) to show particles on waxed blocks to players holding honeycombs
-particle-range: 20
 
 # Materials that require one honeycomb to wax and guarantee one honeycomb drop upon destruction
 # Materials list: https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/Material.html
@@ -12,16 +7,22 @@ waxable-materials:
   - "COMPARATOR"
   - "LEVER"
   - "REPEATER"
+
 # Any Material ending with these suffixes will be added to `waxable-materials`
 waxable-materials-suffixes:
   - "_DOOR"
   - "_FENCE_GATE"
   - "_TRAPDOOR"
 
+# Any Material starting with these prefixes will be added to `waxable-materials`
+waxable-materials-prefixes:
+#  - "WAXED_"
+
 # Materials that, when waxed, have only a specified chance of using the honeycomb
 chance-based-waxable-materials:
   - "BOOKSHELF"
   - "HAY_BLOCK"
+
 # Any Material ending with these suffixes will be added to `chance-based-waxable-materials`
 chance-based-waxable-materials-suffixes:
   - "_FENCE"
@@ -29,6 +30,10 @@ chance-based-waxable-materials-suffixes:
   - "_LOG"
   - "_PLANKS"
   - "_WOOD"
+
+# Any Material starting with these prefixes will be added to `chance-based-waxable-materials`
+chance-based-waxable-materials-prefixes:
+  - "WAXED_"
 
 # Percent consumption and drop chances for chance-based waxable materials (0 to 100)
 honeycomb-consumption-chance: 10
@@ -40,10 +45,21 @@ interactive-materials:
   - "COMPARATOR"
   - "LEVER"
   - "REPEATER"
+
+# Any Material ending with these suffixes will be added to `interactive-materials`
 interactive-materials-suffixes:
   - "_DOOR"
   - "_FENCE_GATE"
   - "_TRAPDOOR"
+
+# Materials that are explicitly disallowed to be right-clicked with on waxed blocks, even if the block's material
+# is not specified in `interactive-materials`.
+disallowed-held-materials:
+#  - "SHEARS"
+
+# Any Material ending with these suffixes will be added to `disallowed-held-materials`
+disallowed-held-materials-suffixes:
+  - "_AXE"
 
 # Whether to send a message to players introducing the plugin upon picking up a honeycomb for the first time.
 # The introductory message is sent only once per player. Introduced players are tracked in `introduced_players.json`
@@ -61,3 +77,38 @@ world-list:
 #  - "world"
 #  - "world_nether"
 #  - "world_the_end"
+
+
+# === VISUAL SETTINGS ===
+
+# Distance (taxicab) to show particles on waxed blocks to players holding honeycombs
+on-honeycomb-hold-particle-range: 20
+
+# Rate (ticks) to spawn particles for players holding honeycombs
+on-honeycomb-hold-particle-rate: 20
+
+# Particle count per particle spawn on each waxed block for players holding honeycombs
+on-honeycomb-hold-particle-count: 2
+
+# Particle count upon waxing a block
+on-wax-particle-count: 8
+
+# Particle count upon attempting to interact with a waxed block
+on-cancel-particle-count: 4
+
+# The value of the X, Y, and Z offsets for all spawned particles.
+particle-radius: 0.20
+
+# Wax particles cannot be seen for full opaque blocks due to the particles being inside the block,
+# so for all light-occluding blocks, those particles are nudged towards the player by `particle-nudge-amount`.
+# However, some blocks are non-occluding but can still visually obstruct particles,
+# so this list contains non-occluding materials to nudge particles for explicitly.
+particle-nudge-materials:
+#  - "COMPOSTER"
+
+# Any Material ending with these suffixes will be added to `particle-nudge-materials`
+particle-nudge-materials-suffixes:
+  - "_LEAVES"
+
+# How much to offset particles, in blocks, for materials that are occluding or listed in `particle-nudge-materials`
+particle-nudge-amount: 0.6

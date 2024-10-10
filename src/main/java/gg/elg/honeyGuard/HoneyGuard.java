@@ -30,7 +30,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public final class HoneyGuard extends JavaPlugin implements Listener {
-
+    
+    static final String WEBPAGE_URL = "https://github.com/Elgenzay/honeyguard";
     private static final String CONFIG_KEY_WAXABLE_MATERIALS = "waxable-materials";
     private static final String CONFIG_KEY_WAXABLE_MATERIALS_SUFFIXES = "waxable-materials-suffixes";
     private static final String CONFIG_KEY_WAXABLE_MATERIALS_PREFIXES = "waxable-materials-prefixes";

@@ -10,7 +10,10 @@ import java.util.logging.Logger;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
+import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 
 class IntroductionManager {
@@ -55,14 +58,17 @@ class IntroductionManager {
     void introduce(Player player) {
         introducedPlayers.add(player.getUniqueId());
         hasUnsavedIntroductions = true;
+        player.playSound(player.getLocation(), Sound.ITEM_HONEYCOMB_WAX_ON, 1.0f, 1.0f);
 
         player.sendMessage(Component.text("You've found your first honeycomb on a server running ", NamedTextColor.YELLOW)
                 .append(Component.text("HoneyGuard", NamedTextColor.GOLD))
                 .append(Component.text(".", NamedTextColor.YELLOW)));
 
         player.sendMessage(Component.text("Run ", NamedTextColor.YELLOW)
-                .append(Component.text("/honeyguard", NamedTextColor.WHITE)
-                        .clickEvent(ClickEvent.runCommand("/honeyguard")))
+                .append(Component.text("/honeyguard", NamedTextColor.WHITE, TextDecoration.UNDERLINED)
+                        .clickEvent(ClickEvent.runCommand("/honeyguard"))
+                        .hoverEvent(HoverEvent.showText(Component.text("Click to run")))
+                )
                 .append(Component.text(" for more information.", NamedTextColor.YELLOW)));
     }
 }

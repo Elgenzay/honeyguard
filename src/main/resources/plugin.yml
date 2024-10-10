@@ -8,4 +8,4 @@ website: https://github.com/Elgenzay/honeyguard
 commands:
   honeyguard:
     description: Display help information for the HoneyGuard plugin
-    usage: /honeyguard <command>
+    usage: /honeyguard

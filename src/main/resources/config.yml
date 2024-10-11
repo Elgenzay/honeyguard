@@ -1,6 +1,9 @@
 # Whether to protect waxed blocks from fire spread
 enable-fire-spread-protection: true
 
+# Whether players in creative mode can interact with waxed blocks
+creative-bypass: false
+
 # Materials that require one honeycomb to wax and guarantee one honeycomb drop upon destruction
 # Materials list: https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/Material.html
 waxable-materials:

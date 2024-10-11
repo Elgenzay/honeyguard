@@ -30,7 +30,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public final class HoneyGuard extends JavaPlugin implements Listener {
-    
+
     static final String WEBPAGE_URL = "https://github.com/Elgenzay/honeyguard";
     private static final String CONFIG_KEY_WAXABLE_MATERIALS = "waxable-materials";
     private static final String CONFIG_KEY_WAXABLE_MATERIALS_SUFFIXES = "waxable-materials-suffixes";
@@ -58,6 +58,7 @@ public final class HoneyGuard extends JavaPlugin implements Listener {
     private static final String CONFIG_KEY_PARTICLE_NUDGE_MATERIALS = "particle-nudge-materials";
     private static final String CONFIG_KEY_PARTICLE_NUDGE_MATERIALS_SUFFIXES = "particle-nudge-materials-suffixes";
     private static final String CONFIG_KEY_PARTICLE_NUDGE_AMOUNT = "particle-nudge-amount";
+    private static final String CONFIG_KEY_CREATIVE_BYPASS = "creative-bypass";
     private static final String WORLD_DATA_FOLDER_NAME = "world_data";
     private long particleRate = 20;
     private int particleRange = 20;
@@ -67,6 +68,7 @@ public final class HoneyGuard extends JavaPlugin implements Listener {
     private double particleRadius = 0.20;
     private double particleNudgeAmount = 0.6;
     boolean fireProtection = true;
+    private boolean creativeBypass = false;
     private boolean showIntroductionMessage = true;
     int honeycombConsumptionChance = 10;
     int honeycombDropChance = 5;
@@ -121,6 +123,7 @@ public final class HoneyGuard extends JavaPlugin implements Listener {
         particleCountCancel = config.getInt(CONFIG_KEY_PARTICLE_COUNT_CANCEL, particleCountCancel);
         particleRadius = config.getDouble(CONFIG_KEY_PARTICLE_RADIUS, particleRadius);
         fireProtection = config.getBoolean(CONFIG_KEY_FIRE_PROTECTION, fireProtection);
+        creativeBypass = config.getBoolean(CONFIG_KEY_CREATIVE_BYPASS, creativeBypass);
         honeycombConsumptionChance = config.getInt(CONFIG_KEY_HONEYCOMB_CONSUMPTION_CHANCE, honeycombConsumptionChance);
         honeycombDropChance = config.getInt(CONFIG_KEY_HONEYCOMB_DROP_CHANCE, honeycombDropChance);
         saveRateMinutes = config.getLong(CONFIG_KEY_SAVE_RATE, saveRateMinutes);
@@ -284,6 +287,8 @@ public final class HoneyGuard extends JavaPlugin implements Listener {
         if (action != Action.RIGHT_CLICK_BLOCK) return;
 
         if (waxedBlockManager.isWaxed(location)) {
+            if (player.getGameMode() == GameMode.CREATIVE && creativeBypass) return;
+
             if (!disallowedHeldMaterials.contains(player.getInventory().getItemInMainHand().getType())) {
                 if (!interactiveMaterials.contains(clickedBlockMaterial)) return;
                 if (event.getItem() != null && player.isSneaking()) return;

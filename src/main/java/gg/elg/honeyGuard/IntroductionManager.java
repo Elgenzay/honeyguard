@@ -34,7 +34,7 @@ class IntroductionManager {
         if (!dataFile.exists()) return new HashSet<>();
         try (Reader reader = new FileReader(dataFile)) {
             return gson.fromJson(reader, new TypeToken<HashSet<UUID>>(){}.getType());
-        } catch (IOException e) {
+        } catch (Exception e) {
             logger.severe("Error loading introduced players: " + e.getMessage());
             return new HashSet<>();
         }
@@ -44,7 +44,7 @@ class IntroductionManager {
         if (hasUnsavedIntroductions) {
             try (Writer writer = new FileWriter(dataFile)) {
                 gson.toJson(introducedPlayers, writer);
-            } catch (IOException e) {
+            } catch (Exception e) {
                 logger.severe("Error saving introduced players: " + e.getMessage());
             }
             hasUnsavedIntroductions = false;

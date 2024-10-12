@@ -60,7 +60,7 @@ class WaxedBlockManager {
         try (Writer writer = new FileWriter(new File(dataFolder, worldName + ".json"))) {
             HashSet<Coordinate> coordinates = waxedBlocks.getOrDefault(worldName, new HashSet<>());
             gson.toJson(coordinates, writer);
-        } catch (IOException e) {
+        } catch (Exception e) {
             logger.severe("Error saving file for world " + worldName + ": " + e.getMessage());
         }
     }
@@ -83,8 +83,9 @@ class WaxedBlockManager {
             Type type = new TypeToken<HashSet<Coordinate>>() {
             }.getType();
             waxedBlocks.put(worldName, gson.fromJson(reader, type));
-        } catch (IOException e) {
-            logger.severe("Error loading from file for world " + worldName + ": " + e.getMessage());
+        } catch (Exception e) {
+            logger.severe("Error loading waxed block data from file for world " + worldName + ": " + e.getMessage());
+            waxedBlocks.put(worldName, new HashSet<>());
             return new HashSet<>();
         }
 

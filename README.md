@@ -12,12 +12,12 @@ they can still be destroyed in the usual way and will drop a honeycomb upon dest
 - **Fire Protection**: 
   - Prevents fire from spreading to waxed blocks.
   - Allows fire to burn indefinitely on waxed blocks without destroying them.
-  - Togglable in `config.yml`, enabled by default.
+  - Togglable in [`config.yml`](/src/main/resources/config.yml), enabled by default.
 - **Chance Blocks**:
   - Some blocks have a probabilistic interaction with honeycombs to reduce costs:
     - A configurable percentage chance of consuming a honeycomb upon waxing.
     - A configurable percentage chance of dropping a honeycomb when destroyed.
-  - Chance blocks are specified in `config.yml`
+  - Chance blocks are specified in [`config.yml`](/src/main/resources/config.yml)
 
 ## Commands
 
@@ -27,18 +27,18 @@ they can still be destroyed in the usual way and will drop a honeycomb upon dest
 
 ## Usage
 
-- **To Wax a Block**: Right-click the block with a honeycomb.
-- **To Display Particles on Waxed Blocks**: Hold a honeycomb in your main hand.
-- **To Check if a Block is Standard or Chance-based**: Left-click the block with a honeycomb.
+- **To wax a block**: Right-click it with a honeycomb.
+- **To unwax a block**: Break it.
+- **To display particles on waxed blocks**: Hold a honeycomb in your main hand.
+- **To check if a block is standard or chance-based**: Left-click the block with a honeycomb.
 
 ## Installation
 
-1. Download the [HoneyGuard.jar](https://github.com/Elgenzay/honeyguard/releases) file.
+1. Download the [`HoneyGuard.jar`](https://github.com/Elgenzay/honeyguard/releases/latest) file.
 2. Place it into your server's `plugins` directory.
-3. Restart the server.
+3. Restart or reload the server.
 
 ## Configuration
 
-Edit the `config.yml` file in the HoneyGuard directory to adjust settings like fire protection and the chance percentages for honeycomb consumption and drop.
-
-
+After the first run, edit the [`config.yml`](/src/main/resources/config.yml) file in the `plugins/HoneyGuard` directory to adjust settings like fire protection and the chance percentages for honeycomb consumption and drop.  
+Restart or reload the server for changes to take effect.

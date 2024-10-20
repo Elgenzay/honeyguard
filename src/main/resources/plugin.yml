@@ -1,5 +1,5 @@
 name: HoneyGuard
-version: '1.0-SNAPSHOT'
+version: '1.0.0'
 main: gg.elg.honeyGuard.HoneyGuard
 api-version: '1.21'
 author: Elgenzay

@@ -2,6 +2,8 @@ package gg.elg.honeyGuard;
 
 import org.bukkit.Location;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 
 public class Coordinate {
@@ -46,5 +48,13 @@ public class Coordinate {
         int xDistance = Math.abs(one.getX() - two.getX());
         int zDistance = Math.abs(one.getZ() - two.getZ());
         return xDistance + zDistance;
+    }
+
+    static Coordinate fromList(List<Integer> list) {
+        return new Coordinate(list.get(0), list.get(1), list.get(2));
+    }
+
+    List<Integer> toList() {
+        return Arrays.asList(x, y, z);
     }
 }

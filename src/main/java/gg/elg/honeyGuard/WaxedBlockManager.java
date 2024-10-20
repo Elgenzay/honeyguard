@@ -9,6 +9,7 @@ import java.io.*;
 import java.lang.reflect.Type;
 import java.util.*;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 class WaxedBlockManager {
 
@@ -28,12 +29,13 @@ class WaxedBlockManager {
 
     void addWaxedBlock(Location location) {
         HashSet<Coordinate> waxedCoordinates = getWaxedCoordinates(location.getWorld().getName());
+        
         if (waxedCoordinates.add(Coordinate.fromLocation(location)))
             unsavedWorldNames.add(location.getWorld().getName());
     }
 
     boolean removeWaxedBlock(Location location) {
-        HashSet<Coordinate> coordinates = waxedBlocks.get(location.getWorld().getName());
+        HashSet<Coordinate> coordinates = getWaxedCoordinates(location.getWorld().getName());
         if (coordinates == null) return false;
 
         if (coordinates.remove(Coordinate.fromLocation(location))) {
@@ -58,8 +60,11 @@ class WaxedBlockManager {
 
     private void saveFile(String worldName) {
         try (Writer writer = new FileWriter(new File(dataFolder, worldName + ".json"))) {
-            HashSet<Coordinate> coordinates = waxedBlocks.getOrDefault(worldName, new HashSet<>());
-            gson.toJson(coordinates, writer);
+            HashSet<List<Integer>> rawCoordinates = waxedBlocks.getOrDefault(worldName, new HashSet<>()).stream()
+                .map(Coordinate::toList)
+                .collect(Collectors.toCollection(HashSet::new));
+
+            gson.toJson(rawCoordinates, writer);
         } catch (Exception e) {
             logger.severe("Error saving file for world " + worldName + ": " + e.getMessage());
         }
@@ -74,19 +79,24 @@ class WaxedBlockManager {
         if (waxedBlocks.containsKey(worldName)) return waxedBlocks.get(worldName);
         File dataFile = new File(dataFolder, worldName + ".json");
 
-        if (!dataFile.exists()){
+        if (!dataFile.exists()) {
+            HashSet<Coordinate> newSet = new HashSet<>();
             waxedBlocks.put(worldName, new HashSet<>());
-            return new HashSet<>();
+            return newSet;
         }
 
         try (Reader reader = new FileReader(dataFile)) {
-            Type type = new TypeToken<HashSet<Coordinate>>() {
-            }.getType();
-            waxedBlocks.put(worldName, gson.fromJson(reader, type));
+            Type setType = new TypeToken<HashSet<List<Integer>>>(){}.getType();
+            HashSet<List<Integer>> rawCoordinates = gson.fromJson(reader, setType);
+
+            HashSet<Coordinate> coordinates = rawCoordinates.stream()
+                    .map(Coordinate::fromList)
+                    .collect(Collectors.toCollection(HashSet::new));
+
+            waxedBlocks.put(worldName, coordinates);
         } catch (Exception e) {
             logger.severe("Error loading waxed block data from file for world " + worldName + ": " + e.getMessage());
             waxedBlocks.put(worldName, new HashSet<>());
-            return new HashSet<>();
         }
 
         return waxedBlocks.get(worldName);

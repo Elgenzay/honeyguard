@@ -451,7 +451,7 @@ public final class HoneyGuard extends JavaPlugin implements Listener {
 
 
     @EventHandler
-    public void onInventoryPickup(InventoryOpenEvent event) {
+    public void onInventoryOpen(InventoryOpenEvent event) {
         HumanEntity entity = event.getPlayer();
         if (isDisabledInWorld(entity.getWorld()) || !showIntroductionMessage) return;
 
